@@ -388,5 +388,13 @@ class Model_DIN(Model):
                 iter += 1
                 if (iter % test_iter) == 0:
                     self.run_test(test_ops, test_sess)
+                if (iter % test_iter) == 0: #add timeline
+                    run_option = xdl.RunOption()
+                    run_option.perf = True
+                    run_statistic = xdl.RunStatistic()
+                    _ = train_sess.run(train_ops, run_option, run_statistic)
+                    xdl.Timeline(run_statistic.perf_result).save('../ckpt/timeline.json-'+ str(iter))
+                    print ('======print the timeline =====')
+                    iter +=1
             train_sess._finish = False
 
