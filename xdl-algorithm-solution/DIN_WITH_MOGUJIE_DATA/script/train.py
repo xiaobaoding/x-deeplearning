@@ -27,7 +27,6 @@ from model import *
 from utils import *
 import xdl
 from xdl.python.training.train_session import QpsMetricsHook, MetricsPrinterHook
-from utils import *
 
 
 
@@ -35,7 +34,7 @@ from utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--seed", help="random seed", default=3)
 parser.add_argument("-jt", "--job_type", help="'train' or 'test'", default='train')
-parser.add_argument("-m", "--model", help="'din' or 'dien'", default='din')
+parser.add_argument("-m", "--model", help="'din' or 'dien'", default='din_mogujie')
 parser.add_argument("-si", "--save_interval", help="checkpoint save interval steps", default=20000)
 parser.add_argument("-dr", "--data_dir", help="data dir")
 args, unknown = parser.parse_known_args()
@@ -47,18 +46,15 @@ save_interval = args.save_interval
 
 
 def get_data_prefix():
-    #/user/dixin/deep/wide_deep_base/2019-02-11/data/tfrecord/train/xxx
-    return args.data_dir
+    return "../data/"
+    #return args.data_dir
 
-train_file = os.path.join(get_data_prefix(), "local_train_splitByUser")
+train_file = os.path.join(get_data_prefix(), "train_data.tfrecords")
 
-def train(train_file=train_file,
-          batch_size=128,
-          maxlen=100,
-          test_iter=700):
-    if xdl.get_config('model') == 'din_mogujie':
+def train():
+    if model_type == 'din_mogujie':
         model = Model_DIN_MOGUJIE(
-            EMBEDDING_DIM, HIDDEN_SIZE, ATTENTION_SIZE)
+            EMBEDDING_DIM, HIDDEN_SIZE, ATTENTION_SIZE,False, train_file,batch_size)
     else:
         raise Exception('only support din_mogujie and dien')
 
@@ -74,7 +70,7 @@ def train(train_file=train_file,
         log_format = "[%(time)s] lstep[%(lstep)s] gstep[%(gstep)s] lqps[%(lqps)s] gqps[%(gqps)s] loss[%(loss)s]"
         hooks = [QpsMetricsHook(), MetricsPrinterHook(log_format)]
         if xdl.get_task_index() == 0:
-            hooks.append(xdl.CheckpointHook(xdl.get_config('checkpoint', 'save_interval')))
+            hooks.append(xdl.CheckpointHook(save_interval))
         train_sess = xdl.TrainSession(hooks=hooks)
 
     with xdl.model_scope('test'):
@@ -87,7 +83,7 @@ def test():
     pass
 
 if __name__ == '__main__':
-    SEED = xdl.get_config("seed")
+    SEED = seed
     if SEED is None:
         SEED = 3
     tf.set_random_seed(SEED)

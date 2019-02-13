@@ -9,7 +9,7 @@ from data_iter import DataIterator
 from operator import mul
 from utils import *
 class Model_DIN_MOGUJIE(object):
-    def __init__(self, EMBEDDING_DIM, HIDDEN_SIZE, ATTENTION_SIZE, use_negsampling=False):
+    def __init__(self, EMBEDDING_DIM, HIDDEN_SIZE, ATTENTION_SIZE, use_negsampling, train_files, batch_size):
         """
 
         :param EMBEDDING_DIM:
@@ -21,7 +21,7 @@ class Model_DIN_MOGUJIE(object):
         self.hidden_size = HIDDEN_SIZE
         self.attention_size = ATTENTION_SIZE
         self.use_negsampling = use_negsampling
-        self.data_iterator = DataIterator()
+        self.data_iterator = DataIterator(train_files, batch_size)
 
     def build_inputs(self):
         """
