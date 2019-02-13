@@ -62,7 +62,7 @@ def train():
 
     with xdl.model_scope('train'):
 
-        train_ops = model.build_network(EMBEDDING_DIM)
+        train_ops = model.build_network()
         lr = 0.001
         # Adam Adagrad
         train_ops.append(xdl.Adam(lr).optimize())
@@ -72,12 +72,13 @@ def train():
         if xdl.get_task_index() == 0:
             hooks.append(xdl.CheckpointHook(save_interval))
         train_sess = xdl.TrainSession(hooks=hooks)
-
+    """
     with xdl.model_scope('test'):
         test_ops = model.build_network(
             EMBEDDING_DIM, is_train=False)
         test_sess = xdl.TrainSession()
-    model.run(train_ops, train_sess, test_ops, test_sess, test_iter=test_iter)
+    """
+    model.run(train_ops, train_sess)
 
 def test():
     pass

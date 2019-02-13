@@ -54,11 +54,15 @@ class Model_DIN_MOGUJIE(object):
                 sequence_token_mask = tf.cast(tf.slice(sequence_emb, [0, 0], [batch_size, reduce_sequence_length]), tf.bool)
                 self.logits_deep = self.bulid_attention_layers(sequence_emb, sequence_token_mask, itemid_emb,
                                                                    itemid_token_mask, 'attention')
-                self.logits = self.logits_deep
-
-            train_ops = self.train_ops()  #
-
-            return train_ops[0], train_ops[1:]
+                self.logits = tf.nn.softmax(self.logits_deep) + 0.00000001
+                #loss / acc
+                labels = tf.slice(inputs[2], [0], tf.shape(self.logits))
+                losses = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=self.logits)
+                self.loss = tf.reduce_mean(losses, name='loss')
+                self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(self.logits), labels), tf.float32))
+            #train_ops = self.train_ops()  #
+            return self.loss, self.accuracy
+            #return train_ops[0], train_ops[1:]
         #get data batch
         datas = self.build_inputs()
         #
@@ -149,22 +153,24 @@ class Model_DIN_MOGUJIE(object):
         dnn3 = tf.layers.dense(dnn2, 1, activation=None, name='f3')[:, 0]
         return dnn3
 
-    def run(self, train_ops, train_sess, test_ops=None, test_sess=None, test_iter=100):
+    def run(self, train_ops, train_sess):
         iter = 0
         for epoch in range(1):
             while not train_sess.should_stop():
                 values = train_sess.run(train_ops)
                 if values is None:
                     break
-                loss, acc, aux_loss, _ = values
+                loss, acc, _ = values
                 add_metrics("loss", loss)
+                add_metrics("acc", acc)
                 add_metrics("time", datetime.datetime.now(
                 ).strftime('%Y-%m-%d %H:%M:%S'))
 
                 iter += 1
-                if (iter % test_iter) == 0:
-                    self.run_test(test_ops, test_sess)
-                if (iter % test_iter) == 0:  # add timeline
+
+                #if (iter % test_iter) == 0:
+                #    self.run_test(test_ops, test_sess)
+                if (iter % 100) == 0:  # add timeline
                     run_option = xdl.RunOption()
                     run_option.perf = True
                     run_statistic = xdl.RunStatistic()

@@ -14,8 +14,10 @@ class DataIterator:
 
     def tf_batch_inputs(self):
         with tf.name_scope('input'):
-            dataset = tf.data.Dataset.from_tensor_slices(self.train_files).interleave(
-                lambda x: tf.data.TFRecordDataset(x).prefetch(10), cycle_length=2)
+            files = tf.data.Dataset.list_files(self.train_files)
+            dataset = files.apply(tf.contrib.data.parallel_interleave(tf.data.TFRecordDataset, cycle_length=2))
+            #dataset = tf.data.Dataset.from_tensor_slices(self.train_files).interleave(
+            #    lambda x: tf.data.TFRecordDataset(x).prefetch(10), cycle_length=2)
             dataset = dataset.shuffle(buffer_size=self.batch_size * 10)
             dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
             dataset = dataset.map(lambda x: self._decode(x), num_parallel_calls=2)
