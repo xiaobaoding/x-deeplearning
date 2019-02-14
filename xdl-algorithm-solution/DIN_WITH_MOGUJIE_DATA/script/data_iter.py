@@ -11,15 +11,18 @@ class DataIterator:
 
         training_data = self.tf_batch_inputs()
         self.iterator = training_data.make_one_shot_iterator()
+        self.tf_sess = tf.Session()
         logger("init the data input at DataIterator")
 
     def tf_batch_inputs(self):
         with tf.name_scope('input'):
             files = tf.data.Dataset.list_files(self.train_files)
+            dataset = tf.data.TFRecordDataset
             dataset = files.apply(tf.contrib.data.parallel_interleave(tf.data.TFRecordDataset, cycle_length=2))
             #dataset = tf.data.Dataset.from_tensor_slices(self.train_files).interleave(
             #    lambda x: tf.data.TFRecordDataset(x).prefetch(10), cycle_length=2)
             dataset = dataset.shuffle(buffer_size=self.batch_size * 10)
+            dataset = dataset.batch(batch_size)# batch first
             dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
             dataset = dataset.map(lambda x: self._decode(x), num_parallel_calls=2)
             dataset = dataset.prefetch(buffer_size=1000)
@@ -66,21 +69,28 @@ class DataIterator:
         #return click_seq, itemid, item_click_seq, item_order_seq, item_query, wide_item, uuid_did, click_rate, gmv_rate, order_rate, click_pv, gmv_count, gmv_sum, label
 
         #cast to np array /it's black magic...
+        """
         sess = tf.Session()
         click_seq_np = np.array(click_seq.eval(session=sess),dtype=np.int32)
         itemid_np = np.array(itemid.eval(session=sess),dtype=np.int32)
         label_np = np.array(label.eval(session=sess),dtype=np.float32)
-
-        return click_seq_np, itemid_np, label_np
+        """
+        return click_seq, itemid, label
 
     def read_and_parse_data(self):
         """
         :return:
         """
         try:
-            click_seq, itemid, label = self.iterator.get_next()
+            data  = self.iterator.get_next()
         except tf.errors.OutOfRangeError:
             raise Exception("train file ends !")
+        #change to np array
+        click_seq_eval, itemid_eval, label_eval = self.tf_sess.run(data)
+
+        click_seq = np.array(click_seq_eval, dtype=np.int32)
+        itemid= np.array(itemid_eval, dtype=np.int32)
+        label = np.array(label_eval, dtype=np.float32)
         #parse data
         results = []
         # 构建xdl SparseTensor
