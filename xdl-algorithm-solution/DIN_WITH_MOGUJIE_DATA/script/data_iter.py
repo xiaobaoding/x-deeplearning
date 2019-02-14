@@ -17,13 +17,12 @@ class DataIterator:
     def tf_batch_inputs(self):
         with tf.name_scope('input'):
             files = tf.data.Dataset.list_files(self.train_files)
-            dataset = tf.data.TFRecordDataset
             dataset = files.apply(tf.contrib.data.parallel_interleave(tf.data.TFRecordDataset, cycle_length=2))
             #dataset = tf.data.Dataset.from_tensor_slices(self.train_files).interleave(
             #    lambda x: tf.data.TFRecordDataset(x).prefetch(10), cycle_length=2)
             dataset = dataset.shuffle(buffer_size=self.batch_size * 10)
             dataset = dataset.batch(batch_size)# batch first
-            dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
+            #dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
             dataset = dataset.map(lambda x: self._decode(x), num_parallel_calls=2)
             dataset = dataset.prefetch(buffer_size=1000)
             return dataset
@@ -47,8 +46,11 @@ class DataIterator:
         for fea_name in base_feature:
             features_config[fea_name] = tf.FixedLenFeature([], tf.int64)
 
-        features_config['label'] = tf.FixedLenFeature([], tf.int64)
+        #features_config['label'] = tf.FixedLenFeature([], tf.int64)
+        #features = tf.parse_example(example, features=features_config)
+        features_config['click_label'] = tf.FixedLenFeature([], tf.int64)
         features = tf.parse_example(example, features=features_config)
+        features["label"] = features['click_label']
 
         label = tf.cast(features['label'], tf.int32)
         click_seq = tf.cast(features['user_click_seq_3day_all'], tf.int32)
@@ -102,7 +104,7 @@ class DataIterator:
         #itemid
         results.append(np.reshape(itemid, -1))  #  why reshape？
         results.append(np.ones([batch_size], np.float32))  # default values
-        results.append(np.array([i + 1 for i in range(batch_size )], dtype=np.int32))  # segments
+        results.append(np.array([i + 1 for i in range(batch_size)], dtype=np.int32))  # segments
         #label
         results.append(np.array(label, dtype=np.float32))
         return results
@@ -115,10 +117,10 @@ class DataIterator:
         :return:
         """
         types = []
-        for _ in range(max_sequence_length): #for click_seqs
-            types.append(np.int64)
-        types.append(np.int64)  #for itemid
-        types.append(np.int64)  # for label
+        for _ in range(2): #for click_seqs
+            types.extend([np.int32, np.float32, np.int32])
+        #types.append(np.int32)  #for itemid
+        types.append(np.float32)  # for label
         datas =xdl.py_func(self.read_and_parse_data, [], output_type=types)
         sparse_cnt = 2  #only click_seq and itemid is sparse
         sparse_tensors = []
