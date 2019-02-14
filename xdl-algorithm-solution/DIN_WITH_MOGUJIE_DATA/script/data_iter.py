@@ -3,6 +3,7 @@ import tensorflow as tf
 import xdl
 from utils import *
 import numpy as np
+import tensorflow as tf
 class DataIterator:
     def __init__(self, train_files, batch_size):
         self.train_files = train_files
@@ -63,7 +64,14 @@ class DataIterator:
         gmv_count = tf.cast(features['item_gmv_count_search_smoothed'], tf.int32)
         gmv_sum = tf.cast(features['item_gmv_sum_search_smoothed'], tf.int32)
         #return click_seq, itemid, item_click_seq, item_order_seq, item_query, wide_item, uuid_did, click_rate, gmv_rate, order_rate, click_pv, gmv_count, gmv_sum, label
-        return click_seq, itemid, label
+
+        #cast to np array /it's black magic...
+        sess = tf.Session()
+        click_seq_np = np.array(click_seq.eval(session=sess),dtype=np.int32)
+        itemid_np = np.array(itemid.eval(session=sess),dtype=np.int32)
+        label_np = np.array(label.eval(session=sess),dtype=np.float32)
+
+        return click_seq_np, itemid_np, label_np
 
     def read_and_parse_data(self):
         """
@@ -77,12 +85,12 @@ class DataIterator:
         results = []
         # 构建xdl SparseTensor
         #click_seq
-        results.append(np.reshape(click_seq, -1)) #ids
+        results.append(np.reshape(click_seq, -1)) #click seq
         results.append(np.ones([batch_size * max_sequence_length], np.float32)) #default values
         results.append(np.array([i + 1 for i in range(batch_size * max_sequence_length)], dtype=np.int32))#segments
 
         #itemid
-        results.append(np.reshape(itemid, -1))  # ids why reshape？
+        results.append(np.reshape(itemid, -1))  #  why reshape？
         results.append(np.ones([batch_size], np.float32))  # default values
         results.append(np.array([i + 1 for i in range(batch_size )], dtype=np.int32))  # segments
         #label
@@ -98,9 +106,9 @@ class DataIterator:
         """
         types = []
         for _ in range(max_sequence_length): #for click_seqs
-            types.extend(np.int64)
-        types.extend(np.int64)  #for itemid
-        types.extend(np.int64)  # for label
+            types.append(np.int64)
+        types.append(np.int64)  #for itemid
+        types.append(np.int64)  # for label
         datas =xdl.py_func(self.read_and_parse_data, [], output_type=types)
         sparse_cnt = 2  #only click_seq and itemid is sparse
         sparse_tensors = []
