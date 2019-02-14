@@ -41,8 +41,8 @@ class Model_DIN_MOGUJIE(object):
         @xdl.tf_wrapper(is_training=True)
         def tf_train_model(*inputs):
             with tf.variable_scope("deep_layer", reuse=tf.AUTO_REUSE):
-                #reshape sparse tensor back??
 
+                #reshape sparse tensor back??
                 sequence_emb = inputs[0]
                 sequence_emb = tf.reshape(inputs[0], [-1, max_sequence_length, EMBEDDING_DIM])
                 sequence_emb.set_shape([None, None, EMBEDDING_DIM])
@@ -50,8 +50,8 @@ class Model_DIN_MOGUJIE(object):
                 itemid_emb = tf.reshape(inputs[1], [-1, EMBEDDING_DIM])
                 itemid_emb.set_shape([None, EMBEDDING_DIM])
 
-                itemid_token_mask = tf.cast(itemid_emb, tf.bool)
-                sequence_token_mask = tf.cast(tf.slice(sequence_emb, [0, 0], [batch_size, reduce_sequence_length]), tf.bool)
+                itemid_token_mask = tf.cast(inputs[4], tf.bool)
+                sequence_token_mask = tf.cast(tf.slice(inputs[3], [0, 0], [batch_size, reduce_sequence_length]), tf.bool)
                 self.logits_deep = self.bulid_attention_layers(sequence_emb, sequence_token_mask, itemid_emb,
                                                                    itemid_token_mask, 'attention')
                 self.logits = tf.nn.softmax(self.logits_deep) + 0.00000001
@@ -85,7 +85,7 @@ class Model_DIN_MOGUJIE(object):
         results.append(seq_emb)
         results.append(item_emb)
         #return results + datas[7:]
-        return results+datas[2:]
+        return results+datas[2:] #0,1,2,3,4
 
     def bulid_attention_layers(self, u_emb, all_token_mask, itemid_emb, temid_token_mask, scope):
         """

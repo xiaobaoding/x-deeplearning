@@ -107,6 +107,11 @@ class DataIterator:
         results.append(np.array([i + 1 for i in range(batch_size)], dtype=np.int32))  # segments
         #label
         results.append(np.array(label, dtype=np.float32))
+
+        #for later use /mask
+        results.append(click_seq)
+        results.append(itemid)
+
         return results
 
     def next_batch(self):
@@ -117,10 +122,13 @@ class DataIterator:
         :return:
         """
         types = []
-        for _ in range(2): #for click_seqs
+        for _ in range(2): #for click_seqs and itemid
             types.extend([np.int32, np.float32, np.int32])
         #types.append(np.int32)  #for itemid
         types.append(np.float32)  # for label
+        types.append(np.int32)  # for click seq
+        types.append(np.int32)  # for itemid
+
         datas =xdl.py_func(self.read_and_parse_data, [], output_type=types)
         sparse_cnt = 2  #only click_seq and itemid is sparse
         sparse_tensors = []
@@ -128,4 +136,4 @@ class DataIterator:
             sparse_tensors.append(xdl.SparseTensor(
                 datas[3 * i], datas[3 * i + 1],
                 datas[3 * i + 2]))  # a batch of sparse examples .  ids/values/segments_index
-        return sparse_tensors + datas[sparse_cnt * 3:]  #
+        return sparse_tensors + datas[sparse_cnt * 3:]  #5 emelemts left
